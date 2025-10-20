@@ -10,5 +10,5 @@ FROM gcr.io/distroless/base
 COPY --from=build /app/main .
 COPY --from=build /app/static ./static
 EXPOSE 8080
-USER gouser:gouser
+USER 1200:1200
 CMD ["./main"]

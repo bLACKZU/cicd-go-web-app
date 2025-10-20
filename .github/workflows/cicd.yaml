@@ -1,0 +1,50 @@
+name: CI/CD Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'k8s/**'
+      - 'static/**'
+      - 'README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Build application
+        run: go build -v -o go-web-app
+    
+      - name: Run tests
+        run: go test ./ -coverprofile=coverage.out
+
+      - name: Install gocover-cobertura
+        run: go install github.com/boumenot/gocover-cobertura@latest
+      
+      - name: Convert coverage to XML
+        run: gocover-cobertura < coverage.out > coverage.xml
+    
+      - name: List files
+        run: |
+            pwd
+            ls -la
+    
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          working-directory: .
+          name: coverage-report.xml
+          path: coverage.xml
+
+        
