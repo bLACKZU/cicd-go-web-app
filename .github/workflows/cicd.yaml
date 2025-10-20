@@ -58,12 +58,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-report
-          path: coverage.xml
+          path: coverage
       
       - name: shell
         run: |
           pwd
           ls -la
+          cat coverage/coverage.xml
           
 
         
