@@ -64,6 +64,6 @@ jobs:
         run: |
           pwd
           ls -la
-          cat 
+          cat coverage.xml
 
         
