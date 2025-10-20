@@ -44,6 +44,25 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report.xml
-          path: coverage.xml
+          path: ./coverage.xml
+
+  sca:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report.xml
+          path: ./coverage.xml
+      
+      - name: shell
+        run: |
+          pwd
+          ls -la
+          cat coverage.xml
 
         
