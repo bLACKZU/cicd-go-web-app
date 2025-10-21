@@ -60,11 +60,14 @@ jobs:
           name: coverage-report
           path: coverage
       
-      - name: shell
-        run: |
-          pwd
-          ls -la
-          cat coverage/coverage.xml
-          
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+      - run: go version
 
-        
+      - name: Shell
+        working-directory: ./coverage
+        run: ls -la
+
+
