@@ -82,6 +82,34 @@ jobs:
         with:
           projectBaseDir: .
 
+      - name: Wait for SonarQube Quality Gate Result
+        run: sleep 20
+
+      - name: Set Sonar variables
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
+        run: |
+          echo "sonar_project_key=$(cat sonar-project.properties | grep sonar.projectKey | cut -d '=' -f 2)" >> $GITHUB_ENV
+          if [ ${{ github.event_name }} == 'pull_request' ]; then
+            echo "pull_request_number=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          fi  
+          if[ ${{ github.event_name }} == 'push' ]; then
+            echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
       
-
-
+      # The -q and -k flags are used to suppress reading the default . curlrc config file progress output and to allow insecure server connections when using SSL.
+      # SonarQube API - https://next.sonarqube.com/sonarqube/web_api/api/qualitygates?query=quality
+      - name: Query Sonar Quality Gate
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
+        run: |
+          if [ ${{ github.event_name }} == 'pull_request' ]; then
+            curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
+              "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" \
+              -o status.json
+          fi
+          if [ ${{ github.event_name }} == 'push' ]; then
+            curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
+              "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" \
+              -o status.json
+          fi
+          cat status.json || true
+          sed -i -e 's/new_coverage/Coverage/g' -e 's/new_violations/New Violations/g' -e 's/new_duplicated_lines_density/Duplications/g' -e 's/new_security_hotspots_reviewed/Security Reviewed/g status.json
