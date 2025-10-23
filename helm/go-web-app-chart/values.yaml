@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  tag: 18755213929
+  tag: 18755282382
   pullPolicy: IfNotPresent
 
 
