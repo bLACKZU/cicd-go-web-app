@@ -115,7 +115,53 @@ jobs:
           sed -i -e 's/new_coverage/Coverage/g' -e 's/new_violations/New Violations/g' -e 's/new_duplicated_lines_density/Duplications/g' -e 's/new_security_hotspots_reviewed/Security Reviewed/g' status.json
           echo "statusfile=status.md" >> $GITHUB_ENV
           echo "statusjson=status.json" >> $GITHUB_ENV
-          echo "================================================="
-          echo $statusjson
-          cat $statusjson
-          
+          echo "sqstatus=$(jq -r '.projectStatus.status' status.json)" >> $GITHUB_ENV
+
+      - name: 'Create status report'
+        if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
+        run: |
+          # Create image header
+          echo '<img src="https://miro.medium.com/v2/resize:fit:600/1*v0J0S3H8NJbj6ngC0ntj7A.jpeg" alt="image" width="150" height="auto">' >> ${{ env.statusfile }}
+          echo "" >> ${{ env.statusfile }}
+          # Create status header
+          if [ ${{ env.sqstatus }} == "OK" ]; then
+            echo ":white_check_mark: SonarQube Quality Gate has PASSED" >> ${{ env.statusfile }}
+          else
+            echo ":x: SonarQube Quality Gate has FAILED" >> ${{ env.statusfile }}
+          fi
+          # Create status table
+          echo "| Metric Name|Status|Value|" >> ${{ env.statusfile }}
+          echo "|-|-|-|" >> ${{ env.statusfile }}
+          cat ${{ env.statusjson }} | jq -r '.projectStatus.conditions[]? | select(.status) | .metricKey + "|" + .status + "|" + .actualValue + "|"' >> ${{ env.statusfile }}
+          echo "" >> ${{ env.statusfile }}
+          # Create status link based on github event for pull_request or merge to main/develop
+          if [ ${{ github.event_name }} == 'pull_request' ]; then
+            echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" >> ${{ env.statusfile }}
+          fi
+          if [ ${{ github.ref_name }} == 'main' ] || [ ${{ github.ref_name }} == 'develop' ] || [ ${{ github.ref_type }} == 'tag' ]; then
+            echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" >> ${{ env.statusfile }}
+          fi
+
+      - name: 'Comment PR with status report'
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: thollander/actions-comment-pull-request@v2.5.0
+        continue-on-error: true
+        with:
+          filePath: ${{ env.statusfile }}
+          comment_tag: sonarqube
+          mode: recreate
+
+      - name: 'Output to summary'
+        if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
+        run: |
+          echo "### SonarQube Quality Gate Status :vertical_traffic_light:" >> $GITHUB_STEP_SUMMARY
+          cat ${{ env.statusfile }} >> $GITHUB_STEP_SUMMARY
+  
+      - name: 'Workflow Status'
+        run: |
+          if [ ${{ env.sqstatus }} == "OK" ]; then
+            echo "SonarQube Quality Gate Status: PASSED"
+          else
+            echo "SonarQube Quality Gate Status: FAILED"
+            exit 1
+          fi
