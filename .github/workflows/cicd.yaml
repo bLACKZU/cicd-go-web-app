@@ -92,7 +92,7 @@ jobs:
           if [ ${{ github.event_name }} == 'pull_request' ]; then
             echo "pull_request_number=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           fi  
-          if[ ${{ github.event_name }} == 'push' ]; then
+          if [ ${{ github.event_name }} == 'push' ]; then
             echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
       
