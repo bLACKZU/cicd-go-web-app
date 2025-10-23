@@ -177,7 +177,7 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ variables.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Set up Docker Buildx
@@ -189,4 +189,4 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ variables.DOCKERHUB_USERNAME }}/$(cat go.mod | grep 'go-web' | cut -d '/' -f 3):${{ github.run_id }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/$(cat go.mod | grep 'go-web' | cut -d '/' -f 3):${{ github.run_id }}
