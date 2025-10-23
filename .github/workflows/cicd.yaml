@@ -218,3 +218,26 @@ jobs:
           file: Dockerfile
           push: true
           tags: ${{ env.IMAGE_NAME }}
+
+  Update_New_Tag_in_Helm_values:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: Build_Image_and_Push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TOKEN }}
+
+      - name: Update Helm values.yaml with new image tag
+        run: |
+          sed -i 's/tag: .*/tag: ${{ github.run_id }}/' helm/go-web-app-chart/values.yaml'
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name 'bLACKZU'
+          git config --global user.email 'satyakighosh65@gmail.com'
+          git add helm/go-web-app-chart/values.yaml
+          git commit -m "Update Helm chart with new image tag ${{ github.run_id }}"
+          git push origin HEAD:${{ github.ref_name }}
