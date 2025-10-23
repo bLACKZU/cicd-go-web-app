@@ -7,7 +7,6 @@ on:
       - main
     paths-ignore:
       - 'k8s/**'
-      - 'static/**'
       - 'README.md'
       - 'helm/**'
 
