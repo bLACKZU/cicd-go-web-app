@@ -232,7 +232,8 @@ jobs:
 
       - name: Update Helm values.yaml with new image tag
         run: |
-          sed -i 's/tag: .*/tag: ${{ github.run_id }}/' helm/go-web-app-chart/values.yaml
+          # write tag as a quoted string so YAML won't coerce large integers to scientific notation
+          sed -i "s/tag: .*/tag: \"${{ github.run_id }}\"/" helm/go-web-app-chart/values.yaml
 
       - name: Commit and Push changes
         run: |
@@ -241,4 +242,3 @@ jobs:
           git add helm/go-web-app-chart/values.yaml
           git commit -m "Update Helm chart with new image tag ${{ github.run_id }}"
           git push origin HEAD:${{ github.ref_name }}
-          
