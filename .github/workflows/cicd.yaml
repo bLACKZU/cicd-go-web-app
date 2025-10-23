@@ -9,6 +9,7 @@ on:
       - 'k8s/**'
       - 'static/**'
       - 'README.md'
+      - 'helm/**'
 
 permissions:
   contents: read
