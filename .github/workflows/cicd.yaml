@@ -113,3 +113,6 @@ jobs:
           fi
           cat status.json || true
           sed -i -e 's/new_coverage/Coverage/g' -e 's/new_violations/New Violations/g' -e 's/new_duplicated_lines_density/Duplications/g' -e 's/new_security_hotspots_reviewed/Security Reviewed/g status.json
+          echo "statusfile=status.md" >> $GITHUB_ENV
+          echo "statusjson=status.json" >> $GITHUB_ENV
+          
