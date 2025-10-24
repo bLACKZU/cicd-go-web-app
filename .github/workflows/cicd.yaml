@@ -95,97 +95,97 @@ jobs:
         run: |
           ls -la
 
-      - name: SonarQube Scan for Go
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: .
+      # - name: SonarQube Scan for Go
+      #   uses: sonarsource/sonarqube-scan-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   with:
+      #     projectBaseDir: .
 
-      - name: Wait for SonarQube Quality Gate Result
-        run: sleep 20
+      # - name: Wait for SonarQube Quality Gate Result
+      #   run: sleep 20
 
-      - name: Set Sonar variables
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
-        run: |
-          echo "sonar_project_key=$(cat sonar-project.properties | grep sonar.projectKey | cut -d '=' -f 2)" >> $GITHUB_ENV
-          if [ ${{ github.event_name }} == 'pull_request' ]; then
-            echo "pull_request_number=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          fi  
-          if [ ${{ github.event_name }} == 'push' ]; then
-            echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
-          fi
+      # - name: Set Sonar variables
+      #   if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
+      #   run: |
+      #     echo "sonar_project_key=$(cat sonar-project.properties | grep sonar.projectKey | cut -d '=' -f 2)" >> $GITHUB_ENV
+      #     if [ ${{ github.event_name }} == 'pull_request' ]; then
+      #       echo "pull_request_number=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+      #     fi  
+      #     if [ ${{ github.event_name }} == 'push' ]; then
+      #       echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
+      #     fi
       
-      # The -q and -k flags are used to suppress reading the default . curlrc config file progress output and to allow insecure server connections when using SSL.
-      # SonarQube API - https://next.sonarqube.com/sonarqube/web_api/api/qualitygates?query=quality
-      - name: Query Sonar Quality Gate
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
-        run: |
-          if [ ${{ github.event_name }} == 'pull_request' ]; then
-            curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
-              "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" \
-              -o status.json
-          fi
-          if [ ${{ github.event_name }} == 'push' ]; then
-            curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
-              "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" \
-              -o status.json
-          fi
-          cat status.json || true
-          sed -i -e 's/new_coverage/Coverage/g' -e 's/new_violations/New Violations/g' -e 's/new_duplicated_lines_density/Duplications/g' -e 's/new_security_hotspots_reviewed/Security Hotspot Reviewed/g' -e 's/new_maintainability_rating/Maintainability/g' -e 's/new_security_rating/Security Rating/g' -e 's/new_reliability_rating/Reliability/g' status.json
-          echo "statusfile=status.md" >> $GITHUB_ENV
-          echo "statusjson=status.json" >> $GITHUB_ENV
-          echo "sqstatus=$(jq -r '.projectStatus.status' status.json)" >> $GITHUB_ENV
+      # # The -q and -k flags are used to suppress reading the default . curlrc config file progress output and to allow insecure server connections when using SSL.
+      # # SonarQube API - https://next.sonarqube.com/sonarqube/web_api/api/qualitygates?query=quality
+      # - name: Query Sonar Quality Gate
+      #   if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request')
+      #   run: |
+      #     if [ ${{ github.event_name }} == 'pull_request' ]; then
+      #       curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
+      #         "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" \
+      #         -o status.json
+      #     fi
+      #     if [ ${{ github.event_name }} == 'push' ]; then
+      #       curl -q -k -u ${{ secrets.SONAR_TOKEN }}: -G \
+      #         "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" \
+      #         -o status.json
+      #     fi
+      #     cat status.json || true
+      #     sed -i -e 's/new_coverage/Coverage/g' -e 's/new_violations/New Violations/g' -e 's/new_duplicated_lines_density/Duplications/g' -e 's/new_security_hotspots_reviewed/Security Hotspot Reviewed/g' -e 's/new_maintainability_rating/Maintainability/g' -e 's/new_security_rating/Security Rating/g' -e 's/new_reliability_rating/Reliability/g' status.json
+      #     echo "statusfile=status.md" >> $GITHUB_ENV
+      #     echo "statusjson=status.json" >> $GITHUB_ENV
+      #     echo "sqstatus=$(jq -r '.projectStatus.status' status.json)" >> $GITHUB_ENV
 
-      - name: 'Create status report'
-        if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
-        run: |
-          # Create image header
-          echo '<img src="https://miro.medium.com/v2/resize:fit:600/1*v0J0S3H8NJbj6ngC0ntj7A.jpeg" alt="image" width="150" height="auto">' >> ${{ env.statusfile }}
-          echo "" >> ${{ env.statusfile }}
-          # Create status header
-          if [ ${{ env.sqstatus }} == "OK" ]; then
-            echo ":white_check_mark: SonarQube Quality Gate has PASSED" >> ${{ env.statusfile }}
-          else
-            echo ":x: SonarQube Quality Gate has FAILED" >> ${{ env.statusfile }}
-          fi
-          # Create status table
-          echo "| Metric Name|Status|Value|" >> ${{ env.statusfile }}
-          echo "|-|-|-|" >> ${{ env.statusfile }}
-          cat ${{ env.statusjson }} | jq -r '.projectStatus.conditions[]? | select(.status) | .metricKey + "|" + .status + "|" + .actualValue + "|"' >> ${{ env.statusfile }}
-          echo "" >> ${{ env.statusfile }}
-          # Create status link based on github event for pull_request or merge to main/develop
-          if [ ${{ github.event_name }} == 'pull_request' ]; then
-            echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" >> ${{ env.statusfile }}
-          fi
-          if [ ${{ github.ref_name }} == 'main' ] || [ ${{ github.ref_name }} == 'develop' ] || [ ${{ github.ref_type }} == 'tag' ]; then
-            echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" >> ${{ env.statusfile }}
-          fi
+      # - name: 'Create status report'
+      #   if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
+      #   run: |
+      #     # Create image header
+      #     echo '<img src="https://miro.medium.com/v2/resize:fit:600/1*v0J0S3H8NJbj6ngC0ntj7A.jpeg" alt="image" width="150" height="auto">' >> ${{ env.statusfile }}
+      #     echo "" >> ${{ env.statusfile }}
+      #     # Create status header
+      #     if [ ${{ env.sqstatus }} == "OK" ]; then
+      #       echo ":white_check_mark: SonarQube Quality Gate has PASSED" >> ${{ env.statusfile }}
+      #     else
+      #       echo ":x: SonarQube Quality Gate has FAILED" >> ${{ env.statusfile }}
+      #     fi
+      #     # Create status table
+      #     echo "| Metric Name|Status|Value|" >> ${{ env.statusfile }}
+      #     echo "|-|-|-|" >> ${{ env.statusfile }}
+      #     cat ${{ env.statusjson }} | jq -r '.projectStatus.conditions[]? | select(.status) | .metricKey + "|" + .status + "|" + .actualValue + "|"' >> ${{ env.statusfile }}
+      #     echo "" >> ${{ env.statusfile }}
+      #     # Create status link based on github event for pull_request or merge to main/develop
+      #     if [ ${{ github.event_name }} == 'pull_request' ]; then
+      #       echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&pullRequest=${{ env.pull_request_number }}" >> ${{ env.statusfile }}
+      #     fi
+      #     if [ ${{ github.ref_name }} == 'main' ] || [ ${{ github.ref_name }} == 'develop' ] || [ ${{ github.ref_type }} == 'tag' ]; then
+      #       echo "${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ env.sonar_project_key }}&branch=${{ env.branch_name }}" >> ${{ env.statusfile }}
+      #     fi
 
-      - name: 'Comment PR with status report'
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: thollander/actions-comment-pull-request@v2.5.0
-        continue-on-error: true
-        with:
-          filePath: ${{ env.statusfile }}
-          comment_tag: sonarqube
-          mode: recreate
+      # - name: 'Comment PR with status report'
+      #   if: ${{ github.event_name == 'pull_request' }}
+      #   uses: thollander/actions-comment-pull-request@v2.5.0
+      #   continue-on-error: true
+      #   with:
+      #     filePath: ${{ env.statusfile }}
+      #     comment_tag: sonarqube
+      #     mode: recreate
 
-      - name: 'Output to summary'
-        if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
-        run: |
-          echo "### SonarQube Quality Gate Status :vertical_traffic_light:" >> $GITHUB_STEP_SUMMARY
-          cat ${{ env.statusfile }} >> $GITHUB_STEP_SUMMARY
+      # - name: 'Output to summary'
+      #   if: (github.event_name == 'pull_request') || (github.ref_name == 'main') || (github.ref_name == 'develop') || (github.ref_type == 'tag')
+      #   run: |
+      #     echo "### SonarQube Quality Gate Status :vertical_traffic_light:" >> $GITHUB_STEP_SUMMARY
+      #     cat ${{ env.statusfile }} >> $GITHUB_STEP_SUMMARY
   
-      - name: 'Workflow Status'
-        run: |
-          if [ ${{ env.sqstatus }} == "OK" ]; then
-            echo "SonarQube Quality Gate Status: PASSED"
-          else
-            echo "SonarQube Quality Gate Status: FAILED"
-            exit 1
-          fi
+      # - name: 'Workflow Status'
+      #   run: |
+      #     if [ ${{ env.sqstatus }} == "OK" ]; then
+      #       echo "SonarQube Quality Gate Status: PASSED"
+      #     else
+      #       echo "SonarQube Quality Gate Status: FAILED"
+      #       exit 1
+      #     fi
 
   Build_Image_and_Push:
     runs-on: ubuntu-latest
@@ -219,26 +219,47 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}
 
+      - name: Run Trivy Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}
+          format: 'sarif'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          output: 'trivy-results.sarif'
+        
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+            sarif_file: 'trivy-results.sarif'
+
   Update_New_Tag_in_Helm_values:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     needs: Build_Image_and_Push
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.TOKEN }}
 
-      - name: Update Helm values.yaml with new image tag
+      - name: Shell
         run: |
-          # write tag as a quoted string so YAML won't coerce large integers to scientific notation
-          sed -i "s/tag: .*/tag: \"${{ github.run_id }}\"/" helm/go-web-app-chart/values.yaml
+          pwd
+          ls -la
 
-      - name: Commit and Push changes
-        run: |
-          git config --global user.name 'bLACKZU'
-          git config --global user.email 'satyakighosh65@gmail.com'
-          git add helm/go-web-app-chart/values.yaml
-          git commit -m "Update Helm chart with new image tag ${{ github.run_id }}"
-          git push origin HEAD:${{ github.ref_name }}
+      # - name: Checkout code
+      #   uses: actions/checkout@v4
+      #   with:
+      #     token: ${{ secrets.TOKEN }}
+
+      # - name: Update Helm values.yaml with new image tag
+      #   run: |
+      #     # write tag as a quoted string so YAML won't coerce large integers to scientific notation
+      #     sed -i "s/tag: .*/tag: \"${{ github.run_id }}\"/" helm/go-web-app-chart/values.yaml
+
+      # - name: Commit and Push changes
+      #   run: |
+      #     git config --global user.name 'bLACKZU'
+      #     git config --global user.email 'satyakighosh65@gmail.com'
+      #     git add helm/go-web-app-chart/values.yaml
+      #     git commit -m "Update Helm chart with new image tag ${{ github.run_id }}"
+      #     git push origin HEAD:${{ github.ref_name }}
