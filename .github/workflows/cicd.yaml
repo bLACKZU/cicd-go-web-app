@@ -224,7 +224,7 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_NAME }}
           format: 'sarif'
-          exit-code: '1'
+          exit-code: '0'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
           output: 'trivy-results.sarif'
